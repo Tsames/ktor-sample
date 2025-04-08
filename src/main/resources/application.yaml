@@ -1,0 +1,6 @@
+ktor:
+  application:
+    modules:
+      - com.example.tsames.ApplicationKt.module
+  deployment:
+    port: 8080
