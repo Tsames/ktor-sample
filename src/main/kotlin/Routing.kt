@@ -1,81 +1,92 @@
 package com.example.tsames
 
 import Priority
-import Task
 import com.example.tsames.model.TaskRepository
 import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import io.ktor.server.http.content.staticResources
-import io.ktor.server.request.*
 import tasksAsTable
 
 fun Application.configureRouting() {
     routing {
         staticResources("/task-ui", "task-ui")
 
-        get("/tasks") {
-            val tasks = TaskRepository.allTasks()
-            call.respondText(
-                contentType = ContentType.parse("text/html"),
-                text = tasks.tasksAsTable()
-            )
-        }
-
-        get("/tasks/byPriority/{priority}") {
-            val priorityAsText = call.parameters["priority"]
-            // If our query param does not exist, return 400
-            if (priorityAsText == null) {
-                call.respond(HttpStatusCode.BadRequest)
-                return@get
+        route("/tasks") {
+            get {
+                val tasks = TaskRepository.allTasks()
+                call.respondText(
+                    contentType = ContentType.parse("text/html"),
+                    text = tasks.tasksAsTable()
+                )
             }
 
-            // Else Try processing the request
-            try {
-                val priority = Priority.valueOf(priorityAsText)
-                val tasks = TaskRepository.tasksByPriority(priority)
-
-                if (tasks.isEmpty()) {
-                    call.respond(HttpStatusCode.NotFound)
+            get ("/byName/{taskName}") {
+                val name = call.parameters["taskName"]
+                if (name == null) {
+                    call.respond(HttpStatusCode.BadRequest)
                     return@get
                 }
 
-                call.respondText(contentType = ContentType.parse("text/html"), text = tasks.tasksAsTable())
-            } catch (e: Exception) {
-                call.respond(HttpStatusCode.BadRequest)
-            }
-        }
+                val task = TaskRepository.taskByName(name)
+                if (task == null) {
+                    call.respond(HttpStatusCode.BadRequest)
+                    return@get
+                }
 
-        post("/tasks") {
-            val formContent = call.receiveParameters()
-
-            val params = Triple(
-                formContent["name"] ?: "",
-                formContent["description"] ?: "",
-                formContent["priority"] ?: "",
-            )
-
-            if (params.toList().any { it.isEmpty() }) {
-                call.respond(HttpStatusCode.BadRequest)
-                return@post
-            }
-
-            try {
-                val priority = Priority.valueOf((params.third))
-                TaskRepository.addTask(
-                    Task(
-                        params.first,
-                        params.second,
-                        priority,
-                    )
+                call.respondText(
+                    contentType = ContentType.parse("text/html"),
+                    text = listOf(task).tasksAsTable()
                 )
+            }
 
-                call.respond(HttpStatusCode.NoContent)
-            } catch (ex: IllegalArgumentException) {
-                call.respond(HttpStatusCode.BadRequest)
-            } catch (ex: IllegalStateException) {
-                call.respond(HttpStatusCode.BadRequest)
+            get("/byPriority/{priority}") {
+                val priorityAsText = call.parameters["priority"]
+                // If our query param does not exist, return 400
+                if (priorityAsText == null) {
+                    call.respond(HttpStatusCode.BadRequest)
+                    return@get
+                }
+
+                // Else Try processing the request
+                try {
+                    val priority = Priority.valueOf(priorityAsText)
+                    val tasks = TaskRepository.tasksByPriority(priority)
+
+                    if (tasks.isEmpty()) {
+                        call.respond(HttpStatusCode.NotFound)
+                        return@get
+                    }
+
+                    call.respondText(contentType = ContentType.parse("text/html"), text = tasks.tasksAsTable())
+                } catch (e: Exception) {
+                    call.respond(HttpStatusCode.BadRequest)
+                }
+            }
+
+            post {
+                val priorityAsText = call.parameters["priority"]
+                // If our query param does not exist, return 400
+                if (priorityAsText == null) {
+                    call.respond(HttpStatusCode.BadRequest)
+                    return@post
+                }
+
+                // Else Try processing the request
+                try {
+                    val priority = Priority.valueOf(priorityAsText)
+                    val tasks = TaskRepository.tasksByPriority(priority)
+
+                    if (tasks.isEmpty()) {
+                        call.respond(HttpStatusCode.NotFound)
+                        return@post
+                    }
+
+                    call.respondText(contentType = ContentType.parse("text/html"), text = tasks.tasksAsTable())
+                } catch (e: Exception) {
+                    call.respond(HttpStatusCode.BadRequest)
+                }
             }
         }
     }
