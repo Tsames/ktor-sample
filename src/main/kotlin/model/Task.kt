@@ -1,5 +1,7 @@
 package com.example.model
 
+package com.example.model
+
 import kotlinx.serialization.Serializable
 
 enum class Priority {
